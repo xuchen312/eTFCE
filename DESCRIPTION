@@ -1,0 +1,13 @@
+Package: eTFCE
+Type: Package
+Title: eTFCE Nonparametric Inference
+Version: 1.0
+Encoding: UTF-8
+Date: 2026-04-02
+Author: Xu Chen
+Maintainer: Xu Chen <xuchen312@gmail.com>
+Description: An optimized TFCE implementation computing the exact TFCE integral for sign-flipping permutation-based inference in one-sample designs, without requiring predefined cluster-forming thresholds.
+License: GPL (>= 2)
+Imports: Rcpp (>= 1.0.14), RNifti
+LinkingTo: Rcpp
+RoxygenNote: 7.3.2
