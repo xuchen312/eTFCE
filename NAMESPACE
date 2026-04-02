@@ -1,0 +1,6 @@
+useDynLib(eTFCE, .registration=TRUE)
+importFrom(Rcpp, evalCpp)
+
+importFrom(RNifti, readNifti)
+
+export(run_eTFCE)

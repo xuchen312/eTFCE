@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <cmath>
 #include <random>
-#include <chrono>
 
 //------------------------- (0) PREPARATIONS FOR 2D INPUTS -------------------------//
 
@@ -595,11 +594,6 @@ struct ETFCEPermResults
     double mTFCE;
     double mCZ;
     double mCM;
-
-    double time_sort;
-    double time_tree;
-    double time_tfce;
-    double time_clus;
 };
 ETFCEPermResults eTFCE(std::vector<double>&           tval,
                        std::vector<std::vector<int>>& adj,
@@ -609,8 +603,6 @@ ETFCEPermResults eTFCE(std::vector<double>&           tval,
                        double H,
                        double t0)
 {
-    auto t_start = std::chrono::steady_clock::now();
-    
     // ---- sort ----
     std::vector<int> ord(m);
     std::iota(ord.begin(), ord.end(), 0);
@@ -623,28 +615,16 @@ ETFCEPermResults eTFCE(std::vector<double>&           tval,
         rank[ord[i]] = i + 1;
     }
     
-    auto t_tree0 = std::chrono::steady_clock::now();
-    
     // ---- find all clusters ----
     ClusterResults cl = findClusters(m, adj, tval, ord, rank);
-    
-    auto t_tree1 = std::chrono::steady_clock::now();
     
     // ---- TFCE ----
     double mTFCE = maxTFCE(m, E, H, tval, cl.SIZE, ord, cl.SIZEchange);
     
-    auto t_tfce1 = std::chrono::steady_clock::now();
-    
     // ---- cluster size & mass ----
     std::vector<double> cs = maxCS(t0, m, tval, cl.SIZE, cl.MASS, ord, rank, cl.SIZEchange);
     
-    auto t_clus1 = std::chrono::steady_clock::now();
-    
-    return ETFCEPermResults{mTFCE, cs[0], cs[1],
-        std::chrono::duration<double>(t_tree0 - t_start).count(),   // sorting
-        std::chrono::duration<double>(t_tree1 - t_tree0).count(),   // tree construction
-        std::chrono::duration<double>(t_tfce1 - t_tree1).count(),   // TFCE
-        std::chrono::duration<double>(t_clus1 - t_tfce1).count()};  // cluster size & mass
+    return ETFCEPermResults{mTFCE, cs[0], cs[1]};
 }
 
 // eTFCE computation (for original data)
@@ -654,11 +634,6 @@ struct ETFCEResults
     std::vector<double> TFCE;
     std::vector<int> CE;
     std::vector<double> CM;
-    
-    double time_sort;
-    double time_tree;
-    double time_tfce;
-    double time_clus;
 };
 ETFCEResults eTFCE_org(std::vector<double>&           tval,
                        std::vector<std::vector<int>>& adj,
@@ -668,8 +643,6 @@ ETFCEResults eTFCE_org(std::vector<double>&           tval,
                        double H,
                        double t0)
 {
-    auto t_start = std::chrono::steady_clock::now();
-    
     // ---- sort ----
     std::vector<int> ord(m);
     std::iota(ord.begin(), ord.end(), 0);
@@ -682,28 +655,16 @@ ETFCEResults eTFCE_org(std::vector<double>&           tval,
         rank[ord[i]] = i + 1;
     }
     
-    auto t_tree0 = std::chrono::steady_clock::now();
-    
     // ---- find all clusters ----
     ClusterResults cl = findClusters(m, adj, tval, ord, rank);
-    
-    auto t_tree1 = std::chrono::steady_clock::now();
     
     // ---- TFCE ----
     TFCEResults res = allTFCE(m, E, H, tval, cl.SIZE, ord, cl.SIZEchange);
     
-    auto t_tfce1 = std::chrono::steady_clock::now();
-    
     // ---- cluster size & mass ----
     OrgCSResults out = orgCS(t0, m, tval, cl.SIZE, cl.MASS, ord, rank, cl.SIZEchange);
     
-    auto t_clus1 = std::chrono::steady_clock::now();
-    
-    return ETFCEResults{res.maxTFCE,std::move(res.TFCE), std::move(out.orgCE), std::move(out.orgCM),
-        std::chrono::duration<double>(t_tree0 - t_start).count(),   // sorting
-        std::chrono::duration<double>(t_tree1 - t_tree0).count(),   // tree construction
-        std::chrono::duration<double>(t_tfce1 - t_tree1).count(),   // TFCE
-        std::chrono::duration<double>(t_clus1 - t_tfce1).count()};  // cluster size & mass
+    return ETFCEResults{res.maxTFCE,std::move(res.TFCE), std::move(out.orgCE), std::move(out.orgCM)};
 }
 
 // [[Rcpp::export]]
@@ -720,8 +681,6 @@ Rcpp::List eTFCE_perms(Rcpp::NumericVector& conts,  // dim1*dim2*dim3 * n
                        Rcpp::Nullable<Rcpp::NumericVector> sign_matrix = R_NilValue,  // optional permutation matrix: n_perm * n
                        bool auto_signflip = true)
 {
-    auto t_start = std::chrono::steady_clock::now();
-    
     int vox = dims[0] * dims[1] * dims[2];
     
     // ---- graph (ONCE) ----
@@ -730,13 +689,10 @@ Rcpp::List eTFCE_perms(Rcpp::NumericVector& conts,  // dim1*dim2*dim3 * n
     std::vector<int>& idt = pre.idt;
     int m = idt.size();
     
-    auto t1 = std::chrono::steady_clock::now();
-    
     // ---- outputs ----
     Rcpp::NumericVector maxTFCE(n_perm);
     Rcpp::NumericVector maxCZ(n_perm);
     Rcpp::NumericVector maxCM(n_perm);
-    Rcpp::NumericVector time_sec(11);
     
     // ---- constants ----
     double sqrt_n = std::sqrt((double)n);
@@ -779,18 +735,11 @@ Rcpp::List eTFCE_perms(Rcpp::NumericVector& conts,  // dim1*dim2*dim3 * n
     //    orgTFCE[idt[i]] = org.TFCE[i];
     //}
     
-    auto t2 = std::chrono::steady_clock::now();
-    
     // =========================
     // (2) PERMUTATIONS
     // =========================
     std::vector<double> signs(n);
     std::vector<double> tval(m);
-    
-    double time_sort = 0.0;
-    double time_tree = 0.0;
-    double time_tfce = 0.0;
-    double time_clus = 0.0;
     
     // ---- prepare sign_matrix (ONCE) ----
     Rcpp::NumericVector sm;
@@ -850,30 +799,9 @@ Rcpp::List eTFCE_perms(Rcpp::NumericVector& conts,  // dim1*dim2*dim3 * n
         maxTFCE[b] = res.mTFCE;
         maxCZ[b]   = res.mCZ;
         maxCM[b]   = res.mCM;
-        
-        time_sort += res.time_sort;
-        time_tree += res.time_tree;
-        time_tfce += res.time_tfce;
-        time_clus += res.time_clus;
     }
     
-    auto t3 = std::chrono::steady_clock::now();
-    
-    time_sec[0] = std::chrono::duration<double>(t1 - t_start).count();  // graph
-    time_sec[1] = std::chrono::duration<double>(t2 - t1).count();       // original
-    time_sec[2] = std::chrono::duration<double>(t3 - t2).count();       // permutation
-    time_sec[3] = org.time_sort;
-    time_sec[4] = org.time_tree;
-    time_sec[5] = org.time_tfce;
-    time_sec[6] = org.time_clus;
-    time_sec[7] = time_sort / n_perm;
-    time_sec[8] = time_tree / n_perm;
-    time_sec[9] = time_tfce / n_perm;
-    time_sec[10] = time_clus / n_perm;
-    
-    
     return Rcpp::List::create(Rcpp::Named("n_perm") = n_perm,
-                              Rcpp::Named("time_sec") = time_sec,
                               Rcpp::Named("maxTFCE") = maxTFCE,
                               Rcpp::Named("maxCZ") = maxCZ,
                               Rcpp::Named("maxCM") = maxCM,
