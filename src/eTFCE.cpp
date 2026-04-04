@@ -242,7 +242,6 @@ ClusterResults findClusters(int m,                                 // number of 
     return ClusterResults{std::move(SIZEchange), std::move(SIZE), std::move(MASS)};
 }
 
-// Compute TFCE scores for all voxels
 struct TFCEResults
 {
     std::vector<double> TFCE;
@@ -315,16 +314,14 @@ TFCEResults allTFCE(int m,
             else if (H == 3.0)
                 statsH[i] = s * s * s * s;
             else
-                statsH[i] = std::exp(Hplus * std::log(s));
-            //statsH[i] = (H == 2.0) ? (s * s * s) : std::pow(s, Hplus);
+                statsH[i] = std::pow(s, Hplus);  //std::exp(Hplus * std::log(s));
         }
 
         // sizes^E
         if (E == 0.5)
             sizesE[i] = std::sqrt((double)sizes[i]);
         else
-            sizesE[i] = std::exp(E * std::log((double)sizes[i]));
-        //sizesE[i] = (E == 0.5) ? std::sqrt((double)sizes[i]) : std::pow((double)sizes[i], E);
+            sizesE[i] = std::pow((double)sizes[i], E);  //std::exp(E * std::log((double)sizes[i]));
     }
     
     for (int i = m-1; i >= 0; i--)
@@ -409,23 +406,25 @@ double maxTFCE(int m,
     for (int i = 0; i < m; i++)
     {
         double s = stats[i];
-        
+
         // stats^H（one-sided）
-        if (H == 2.0)
-            statsH[i] = s * s * s;
-        else if (H == 1.0)
-            statsH[i] = s * s;
-        else if (H == 3.0)
-            statsH[i] = s * s * s * s;
-        else
-            statsH[i] = std::exp(Hplus * std::log(s));
-        //statsH[i] = (s > 0.0) ? std::pow(s, H + 1.0) : 0.0;
-        
+        if (s > 0.0)
+        {
+            if (H == 2.0)
+                statsH[i] = s * s * s;
+            else if (H == 1.0)
+                statsH[i] = s * s;
+            else if (H == 3.0)
+                statsH[i] = s * s * s * s;
+            else
+                statsH[i] = std::pow(s, Hplus);  //std::exp(Hplus * std::log(s));
+        }
+
         // sizes^E
         if (E == 0.5)
             sizesE[i] = std::sqrt((double)sizes[i]);
         else
-            sizesE[i] = std::exp(E * std::log((double)sizes[i]));
+            sizesE[i] = std::pow((double)sizes[i], E);  //std::exp(E * std::log((double)sizes[i]));
     }
     
     for (int i = m-1; i >= 0; i--)
