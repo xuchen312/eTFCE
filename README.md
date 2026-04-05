@@ -1,6 +1,10 @@
 # eTFCE
 
-**Exact Threshold-Free Cluster Enhancement via Fast Cluster Retrieval (eTFCE)** is a statistical inference procedure that integrates exact TFCE computation, rather than the approximate methods used in common implementations, with an efficient cluster retrieval algorithm. This enables fast nonparametric inference as well as simultaneous cluster-level inference.
+**Exact Threshold-Free Cluster Enhancement via Fast Cluster Retrieval (eTFCE)** is a statistical inference framework for neuroimaging data that combines exact TFCE computation with an efficient cluster retrieval algorithm.
+
+Unlike standard TFCE implementations that rely on approximations, eTFCE performs exact TFCE-based permutation inference, enabling both voxel-wise and cluster-level nonparametric inference in a unified framework.
+
+The toolbox also provides utilities for statistical map reconstruction and inference output generation, including TFCE-corrected p-value maps and cluster-level summary tables.
 
 ## Installation
 
@@ -8,60 +12,141 @@
    
    Install RStudio (optional): https://posit.co/download/rstudio-desktop/
 
-2. Install the R package `devtools`:
+   Install the R package `devtools`:
     ```r
     install.packages("devtools")
     ```
 
-3. Install eTFCE from GitHub:
+2. Install eTFCE from GitHub:
     ```r
     devtools::install_github("xuchen312/eTFCE")
     ```
 
-## Examples
+## Usage
+
+### Example 1: Automatic sign-flipping permutations
 
 ```r
 library(eTFCE)
 
-# Example 1: run eTFCE using automatically generated sign-flipping permutations
-res <- eTFCE_perms(conts, mask)
-
-# Example 2: run eTFCE using a user-provided permutation matrix (n_perm x n_subj)
-sign_matrix <- read.table("TFCE_perm_tstat1.txt", header = FALSE)
-sign_matrix <- unlist(t(sign_matrix), use.names = FALSE)
-res <- eTFCE_perms(conts, mask, sign_matrix = sign_matrix, auto_signflip = FALSE)
+res <- eTFCE_perms(conts, mask, n_perm = 1000)
 ```
 
-## Input / Output
+### Example 2: User-provided permutation matrix
 
-**Input**: 2 required arguments and 8 optional parameters
+```r
+sign_matrix <- read.table("TFCE_perm_tstat1.txt", header = FALSE)
+sign_matrix <- unlist(t(sign_matrix), use.names = FALSE)
+
+res <- eTFCE_perms(
+conts, mask,
+sign_matrix = sign_matrix,
+auto_signflip = FALSE)
+```
+
+### Example 3: Write results
+
+After running inference, you can generate statistical maps and cluster tables:
+
+```r
+df <- write_eTFCE(res, mask, file = "results/eTFCE_output")
+```
+
+This produces:
+
+- Voxel-wise t-statistic map
+- Voxel-wise TFCE map
+- TFCE-corrected p-value map
+- Cluster-level inference result table
+
+## Input Parameters
+
+### Required inputs
 
 - `conts`: Path to 4D NIfTI image (nDim[1]*nDim[2]*nDim[3]*n_subj)
+
 - `mask`: Path to 3D mask
-- `n_perm`: Number of permutations to perform (default: 5000)
+
+### Optional parameters
+
+- `n_perm`: Number of permutations (default: 5000)
+  
 - `E`: TFCE extent parameter (default: 0.5)
+  
 - `H`: TFCE height parameter (default: 2.0)
+  
 - `t0`: Initial cluster-forming threshold (default: 3.1)
-- `conn`: Connectivity criterion (e.g., 6, 18, 26; default: 26)
+  
+- `conn`: Voxel connectivity (6 / 18 / 26; default: 26)
+  
 - `seed`: Random seed for reproducibility (default: 5000)
-- `sign_matrix`: Vectorized permutation sign matrix (default: NULL). Used only when `auto_signflip = FALSE`.
-- `auto_signflip`: Logical (default: TRUE). If `TRUE`, permutations are generated automatically via internal sign flipping. If `FALSE`, a user-provided `sign_matrix` must be supplied.
+  
+- `sign_matrix`: Vectorized User-supplied (n_subj x n_perm) permutation sign matrix (default: NULL)
+  
+- `auto_signflip`: If `TRUE`, permutations are generated internally via sign-flipping; if `FALSE`, a user-provided `sign_matrix` must be supplied (default: TRUE)
 
-**Output**: a list of permutation-based null distributions and observed test statistics:
+## Output of `eTFCE_perms`
 
-- `n_perm`: Number of permutations used.
-- `maxTFCE`: Maximum TFCE statistic across permutations.
-- `maxCZ`: Maximum cluster extent (CZ) across permutations.
-- `maxCM`: Maximum cluster mass (CM) across permutations.
-- `mTFCE`: Maximum TFCE value from the original (observed) data.
-- `orgTFCE`: TFCE values from the original data.
-- `orgCZ`: Cluster extent values from the original data.
-- `orgCM`: Cluster mass values from the original data.
+A list of permutation-based null distributions and observed statistics:
+
+### Permutation-based statistics
+
+- `n_perm`: Number of permutations used
+
+- `maxTFCE`: Maximum TFCE statistic across permutations
+  
+- `maxCZ`: Maximum cluster extent (CZ) across permutations
+  
+- `maxCM`: Maximum cluster mass (CM) across permutations
+
+May include or exclude observed depending on backend; handled internally in post-processing.
+
+### Observed statistics
+  
+- `mTFCE`: Maximum TFCE value from the original (observed) data
+  
+- `orgCZ`: Cluster extent values (observed)
+  
+- `orgCM`: Cluster mass values (observed)
+  
+- `orgTFCE`: Voxel-wise TFCE map (observed)
+  
+- `orgT`: Voxel-wise t-statistic map (observed)
+
+## Post-processing (`write_eTFCE`)
+
+The function `write_eTFCE()` performs:
+
+1. Voxel-wise outputs
+
+   - t-statistic map
+   - TFCE map
+   - TFCE-corrected p-value map (FWER)
+  
+2. Cluster-level inference
+
+   - cluster extent (CZ)
+   - cluster mass (CM)
+   - permutation-based p-values
+  
+3. Output table
+
+   Returned table:
+   
+   | Cluster | CZ | p_CZ | CM | p_CM |
+   |--------|----|------|----|------|
+
+   Clusters are sorted by decreasing cluster extent (CZ).
 
 ## Notes
 
-- This repository currently provides an example for a one-sample t-test using sign flipping.
-- The underlying computational framework is general and can be extended to other designs (e.g., two-sample tests or regression models). Extensions to other models can be provided upon request.
+- The current implementation supports **one-sample t-test via sign-flipping permutations**
+- The framework is general and can be extended to:
+      - two-sample tests
+      - regression models
+      - GLM-based designs
+      - etc.
+- `write_eTFCE()` is designed to be robust to inconsistent permutation outputs (i.e., whether observed statistics are included in permutation-based output vectors or not).
 
 ## References
 
@@ -73,6 +158,6 @@ Smith S.M. and Nichols T.E. (2009). Threshold-free cluster enhancement: addressi
 
 ## Contact
 
-If you are interested in applying this method to your own data or would like help adapting the code, please feel free to open an issue or get in touch. I would be happy to collaborate. :blush:
+If you are interested in applying this method to your own data or extending it to other study designs, please open an issue or contact the author. Contributions and collaborations are welcome. :blush:
 
 Email: [xuchen312@gmail.com](mailto:xuchen312@gmail.com)
