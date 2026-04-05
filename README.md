@@ -63,7 +63,11 @@ This produces:
 
 ### Required inputs
 
-- `conts`: Path to 4D NIfTI image (nDim[1]*nDim[2]*nDim[3]*n_subj)
+- `conts`: Path to 4D NIfTI image (nDim[1] x nDim[2] x nDim[3] x n_subj), which can be generated from multiple 3D NIfTI images using FSL, e.g.,
+
+   ```r
+   fslmerge -t output_4D.nii.gz sub*.nii.gz
+   ```
 
 - `mask`: Path to 3D mask
 
@@ -133,8 +137,8 @@ The function `write_eTFCE()` performs:
 
    Returned table:
    
-   | Cluster | CZ | p_CZ | CM | p_CM |
-   |--------|----|------|----|------|
+   Cluster | CZ | p_CZ | CM | p_CM 
+   --------|----|------|----|------
 
    Clusters are sorted by decreasing cluster extent (CZ).
 
