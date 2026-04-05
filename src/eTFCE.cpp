@@ -726,13 +726,17 @@ Rcpp::List eTFCE_perms(Rcpp::NumericVector& conts,  // dim1*dim2*dim3 * n
         if (var > 0) tval0[i] = sqrt_n * mean / std::sqrt(var);
     }
     
-    // observed TFCE
+    // observed eTFCE
     ETFCEResults org = eTFCE_org(tval0, adj, idt, m, E, H, t0);
-    //std::vector<double> orgTFCE(vox, 0.0);
-    //for (int i = 0; i < m; i++)
-    //{
-    //    orgTFCE[idt[i]] = org.TFCE[i];
-    //}
+    
+    // observed TFCE & t maps
+    Rcpp::NumericVector orgTFCE(vox, 0.0);
+    Rcpp::NumericVector orgT(vox, 0.0);
+    for (int i = 0; i < m; i++)
+    {
+        orgTFCE[idt[i]] = org.TFCE[i];
+        orgT[idt[i]] = tval0[i];
+    }
     
     // =========================
     // (2) PERMUTATIONS
@@ -805,7 +809,8 @@ Rcpp::List eTFCE_perms(Rcpp::NumericVector& conts,  // dim1*dim2*dim3 * n
                               Rcpp::Named("maxCZ") = maxCZ,
                               Rcpp::Named("maxCM") = maxCM,
                               Rcpp::Named("mTFCE") = org.maxTFCE,
-                              Rcpp::Named("orgTFCE") = Rcpp::wrap(org.TFCE),
                               Rcpp::Named("orgCZ") = Rcpp::wrap(org.CE),
-                              Rcpp::Named("orgCM") = Rcpp::wrap(org.CM));
+                              Rcpp::Named("orgCM") = Rcpp::wrap(org.CM),
+                              Rcpp::Named("orgTFCE") = orgTFCE,
+                              Rcpp::Named("orgT") = orgT);
 }

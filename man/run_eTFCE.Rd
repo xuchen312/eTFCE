@@ -18,9 +18,9 @@ run_eTFCE(
 )
 }
 \arguments{
-\item{conts}{Path to 4D NIfTI image}
+\item{conts}{Path to a 4D NIfTI image}
 
-\item{mask}{Path to 3D mask}
+\item{mask}{Path to a 3D mask}
 
 \item{n_perm}{Number of permutations to perform (default: 5000)}
 
@@ -48,17 +48,19 @@ If TRUE, permutations are generated automatically via sign flipping.
 If FALSE, a user-provided `sign_matrix` must be supplied.}
 }
 \value{
-eTFCE inference results returned from the C++ backend, including
-        permutation-based null distributions and observed test statistics.
+A list of eTFCE inference results returned from the C++ backend, 
+        including permutation-based null distributions and observed test 
+        statistics.
 \describe{
-  \item{n_perm}{Number of permutations used.}
-  \item{maxTFCE}{Maximum TFCE statistic across permutations.}
-  \item{maxCZ}{Maximum cluster extent (CZ) across permutations.}
-  \item{maxCM}{Maximum cluster mass (CM) across permutations.}
-  \item{mTFCE}{Maximum TFCE value from the original (observed) data.}
-  \item{orgTFCE}{TFCE values from the original data.}
-  \item{orgCZ}{Cluster extent values from the original data.}
-  \item{orgCM}{Cluster mass values from the original data.}
+  \item{n_perm}{Number of permutations used (scalar).}
+  \item{maxTFCE}{Maximum TFCE statistic across permutations (vector).}
+  \item{maxCZ}{Maximum cluster extent (CZ) across permutations (vector).}
+  \item{maxCM}{Maximum cluster mass (CM) across permutations (vector).}
+  \item{mTFCE}{Maximum TFCE value from the original (observed) data (scalar).}
+  \item{orgCZ}{Cluster extent values from the original data (vector).}
+  \item{orgCM}{Cluster mass values from the original data (vector).}
+  \item{orgTFCE}{TFCE values from the original data (vector/image).}
+  \item{orgT}{t-statistic values from the original data (vector/image).}
 }
 }
 \description{
@@ -72,19 +74,20 @@ auto-generated sign-flipping permutations or a user-provided sign matrix.
 # Example 1: Auto sign-flipping permutations
 # =========================================================
 
-res <- eTFCE_perms(conts, mask, n_perm = 1000, seed = 1000)
+res <- run_eTFCE(conts, mask, n_perm = 1000, seed = 1000)
 
 # =========================================================
 # Example 2: Use external sign matrix (e.g., FSL randomise)
 # =========================================================
 
+# sign matrix (n_perm × n_subj), saved as a text file 
+# (output from FSL randomise).
 sign_matrix <- read.table("TFCE_perm_tstat1.txt", header = FALSE)
-sign_matrix <- unlist(sign_matrix, use.names = FALSE)
+sign_matrix <- unlist(t(sign_matrix), use.names = FALSE)
 
-res <- eTFCE_perms("subs_4D.nii.gz", "mask.nii.gz", n_perm = 1000,
-                   sign_matrix = sign_matrix, auto_signflip = FALSE)
+res <- run_eTFCE(conts, mask, n_perm = 1000,
+                 sign_matrix = sign_matrix, auto_signflip = FALSE)
 
 }
-
 
 }
