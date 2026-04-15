@@ -1,8 +1,8 @@
 # eTFCE
 
-**Exact Threshold-Free Cluster Enhancement via Fast Cluster Retrieval (eTFCE)** is a statistical inference framework for neuroimaging data that combines exact TFCE computation with an efficient cluster retrieval algorithm.
+**Exact Threshold-Free Cluster Enhancement via Fast Cluster Retrieval (eTFCE)** is a statistical inference approach for neuroimaging data that combines exact TFCE computation with an efficient cluster retrieval algorithm.
 
-Unlike standard TFCE implementations that rely on approximations, eTFCE performs exact TFCE-based permutation inference, enabling both voxel-wise and cluster-level nonparametric inference in a unified framework.
+Unlike standard TFCE implementations that rely on approximations, eTFCE performs exact TFCE-based permutation inference, enabling both voxel-wise and cluster-level nonparametric inference in a unified computational framework.
 
 The toolbox also provides utilities for statistical map reconstruction and inference output generation, including TFCE-corrected p-value maps and cluster-level summary tables.
 
@@ -32,10 +32,12 @@ library(eTFCE)
 res <- eTFCE_perms(conts, mask, n_perm = 1000)
 ```
 
-### Example 2: User-provided permutation matrix
+### Example 2: User-provided permutation matrix (nSubj x nPerm)
 
 ```r
+# FSL randomise outputs nPerm x nSubj permutation matrix
 sign_matrix <- read.table("TFCE_perm_tstat1.txt", header = FALSE)
+# transpose and vectorize
 sign_matrix <- unlist(t(sign_matrix), use.names = FALSE)
 
 res <- eTFCE_perms(
@@ -54,10 +56,18 @@ df <- write_eTFCE(res, mask, file = "results/eTFCE_output")
 
 This produces:
 
-- Voxel-wise t-statistic map
-- Voxel-wise TFCE map
-- TFCE-corrected p-value map
-- Cluster-level inference result table
+- `results/eTFCE_output_tstat.nii.gz` - Voxel-wise t-statistic map
+- `results/eTFCE_output_tfce.nii.gz` - Voxel-wise TFCE map
+- `results/eTFCE_output_tfce_corrp.nii.gz` - TFCE-corrected p-value map
+- Cluster-level inference result table (printed to console; also returned as data frame)
+
+To save the cluster table as a CSV file:
+
+```r
+write.csv(df, "clus.csv", row.names = FALSE)
+```
+
+`write_eTFCE()` is designed to be robust to inconsistent permutation outputs (i.e., whether observed statistics are included in permutation-based output vectors or not).
 
 ## Input Parameters
 
@@ -85,7 +95,7 @@ This produces:
   
 - `seed`: Random seed for reproducibility (default: 5000)
   
-- `sign_matrix`: Vectorized User-supplied (n_subj x n_perm) permutation sign matrix (default: NULL)
+- `sign_matrix`: Vectorized User-supplied (nSubj x nPerm) permutation sign matrix (default: NULL)
   
 - `auto_signflip`: If `TRUE`, permutations are generated internally via sign-flipping; if `FALSE`, a user-provided `sign_matrix` must be supplied (default: TRUE)
 
@@ -103,8 +113,6 @@ A list of permutation-based null distributions and observed statistics:
   
 - `maxCM`: Maximum cluster mass (CM) across permutations
 
-May include or exclude observed depending on backend; handled internally in post-processing.
-
 ### Observed statistics
   
 - `mTFCE`: Maximum TFCE value from the original (observed) data
@@ -117,9 +125,11 @@ May include or exclude observed depending on backend; handled internally in post
   
 - `orgT`: Voxel-wise t-statistic map (observed)
 
+The returned list includes both permutation-based null distributions and observed statistics. The exact structure is handled internally and is compatible with `write_eTFCE()` for post-processing.
+
 ## Post-processing (`write_eTFCE`)
 
-The function `write_eTFCE()` performs:
+The function `write_eTFCE()` provides:
 
 1. Voxel-wise outputs
 
@@ -139,6 +149,7 @@ The function `write_eTFCE()` performs:
    
    Cluster | CZ | p_CZ | CM | p_CM 
    --------|----|------|----|------
+   ...|...|...|...|...
 
    Clusters are sorted by decreasing cluster extent (CZ).
 
@@ -150,7 +161,6 @@ The function `write_eTFCE()` performs:
       - regression models
       - GLM-based designs
       - etc.
-- `write_eTFCE()` is designed to be robust to inconsistent permutation outputs (i.e., whether observed statistics are included in permutation-based output vectors or not).
 
 ## References
 
